@@ -99,102 +99,16 @@ async def root():
 @app.post("/api/ai/ask", response_model=AIAskResponse)
 async def ai_ask(request: AIAskRequest):
     """AI chat endpoint with RAG"""
-    import httpx
-    import json
-    
-    # Try multiple approaches in order of preference
-    
-    # 1. Try the full AI service with RAG
     try:
-        from app.ai import ai_service
-        return await ai_service.process_question(request)
-    except Exception as ai_service_error:
-        print(f"AI service failed: {ai_service_error}")
-    
-    # 2. Try direct Ollama API call
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            ollama_response = await client.post(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": "mistral:7b",  # Use available model
-                    "prompt": f"""You are an AI tutor for {request.course_id} - {request.module_id}. 
-                    
-Student question: {request.question}
-Language: {request.lang}
-
-Please provide a helpful, educational response. Be concise but informative.""",
-                    "stream": False
-                }
-            )
-            
-            if ollama_response.status_code == 200:
-                ollama_data = ollama_response.json()
-                ai_answer = ollama_data.get("response", "").strip()
-                
-                if ai_answer:
-                    return AIAskResponse(
-                        answer=ai_answer,
-                        sources=[{"doc": "ollama_direct", "chunk": "generated", "score": 1.0}],
-                        followups=["Would you like me to elaborate on any part?", "Do you have related questions?"],
-                        escalate=False
-                    )
-    except Exception as ollama_error:
-        print(f"Ollama API failed: {ollama_error}")
-    
-    # 3. Try OpenAI-compatible API (if available)
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            openai_response = await client.post(
-                "http://localhost:1234/v1/chat/completions",  # LM Studio or similar
-                headers={"Content-Type": "application/json"},
-                json={
-                    "model": "local-model",
-                    "messages": [
-                        {"role": "system", "content": f"You are an AI tutor for {request.course_id} - {request.module_id}. Provide helpful, educational responses."},
-                        {"role": "user", "content": request.question}
-                    ],
-                    "temperature": 0.7,
-                    "max_tokens": 500
-                }
-            )
-            
-            if openai_response.status_code == 200:
-                openai_data = openai_response.json()
-                ai_answer = openai_data["choices"][0]["message"]["content"].strip()
-                
-                if ai_answer:
-                    return AIAskResponse(
-                        answer=ai_answer,
-                        sources=[{"doc": "local_openai_api", "chunk": "generated", "score": 1.0}],
-                        followups=["Would you like me to elaborate on any part?", "Do you have related questions?"],
-                        escalate=False
-                    )
-    except Exception as openai_error:
-        print(f"OpenAI-compatible API failed: {openai_error}")
-    
-    # 4. Fallback to smart keyword-based responses
-    question_lower = request.question.lower()
-    
-    if any(word in question_lower for word in ['neural network', 'neural', 'network']):
-        answer = "Neural networks are computational models inspired by biological neural networks in the brain. They consist of interconnected nodes (neurons) that process information through weighted connections. In deep learning, we use multiple layers of these networks to learn complex patterns from data. Each layer transforms the input progressively, allowing the network to learn hierarchical representations."
-        sources = [{"doc": "ml_fundamentals", "chunk": "neural_networks_intro", "score": 0.95}]
-    elif any(word in question_lower for word in ['deep learning', 'deep', 'learning']):
-        answer = "Deep learning is a subset of machine learning that uses neural networks with multiple layers (hence 'deep') to learn complex patterns in data. It's particularly effective for tasks like image recognition, natural language processing, and speech recognition. The key advantage is that deep networks can automatically learn feature representations from raw data."
-        sources = [{"doc": "deep_learning_guide", "chunk": "introduction", "score": 0.92}]
-    elif any(word in question_lower for word in ['machine learning', 'ml', 'algorithm']):
-        answer = "Machine learning is a field of artificial intelligence that enables computers to learn and make decisions from data without being explicitly programmed for every scenario. It includes supervised learning (learning from labeled examples), unsupervised learning (finding patterns in unlabeled data), and reinforcement learning (learning through interaction and feedback)."
-        sources = [{"doc": "ml_basics", "chunk": "overview", "score": 0.89}]
-    else:
-        answer = f"I understand you're asking about '{request.question}'. No local AI models are currently running. To get AI-powered responses, please start Ollama (port 11434) or another local AI service. For now, I can help with basic questions about {request.course_id} topics."
-        sources = []
-    
-    return AIAskResponse(
-        answer=answer,
-        sources=sources,
-        followups=["Would you like me to explain this concept in more detail?", "Do you have questions about practical applications?"],
-        escalate=False
-    )
+        # Placeholder implementation
+        return AIAskResponse(
+            answer=f"I received your question: '{request.question}'. This is a placeholder response for {request.course_id}.",
+            sources=[],
+            followups=["Would you like more details?", "Any other questions?"],
+            escalate=False
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI service error: {str(e)}")
 
 @app.get("/api/ai/health")
 async def ai_health():
